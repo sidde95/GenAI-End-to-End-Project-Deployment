@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TransactionType {
+  income
+  expense
+}
+
+enum AssetType {
+  stock
+  crypto
+  fund
+  cash
+  other
+}
+
+model User {
+  id            String        @id @default(uuid())
+  email         String        @unique
+  password_hash String
+  full_name     String
+  created_at    DateTime      @default(now())
+  updated_at    DateTime      @updatedAt
+  categories    Category[]
+  transactions  Transaction[]
+  budgets       Budget[]
+  holdings      Holding[]
+}
+
+model Category {
+  id           String          @id @default(uuid())
+  user_id      String
+  name         String
+  type         TransactionType
+  is_default   Boolean         @default(false)
+  created_at   DateTime        @default(now())
+  updated_at   DateTime        @updatedAt
+  user         User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  budgets      Budget[]
+}
+
+model Transaction {
+  id          String          @id @default(uuid())
+  user_id     String
+  category_id String
+  amount      Decimal         @db.Decimal(15, 2)
+  type        TransactionType
+  occurred_on DateTime        @db.Date
+  description String?
+  created_at  DateTime        @default(now())
+  updated_at  DateTime        @updatedAt
+  user        User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  category    Category        @relation(fields: [category_id], references: [id])
+}
+
+model Budget {
+  id           String   @id @default(uuid())
+  user_id      String
+  category_id  String
+  period_key   String
+  limit_amount Decimal  @db.Decimal(15, 2)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+  user         User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  category     Category @relation(fields: [category_id], references: [id])
+
+  @@unique([user_id, category_id, period_key])
+}
+
+model Holding {
+  id                   String    @id @default(uuid())
+  user_id              String
+  asset_type           AssetType
+  symbol               String?
+  quantity             Decimal   @db.Decimal(20, 8)
+  cost_basis           Decimal   @db.Decimal(15, 2)
+  current_price        Decimal?  @db.Decimal(15, 2)
+  valuation_updated_at DateTime?
+  created_at           DateTime  @default(now())
+  updated_at           DateTime  @updatedAt
+  user                 User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
